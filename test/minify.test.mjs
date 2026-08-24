@@ -134,3 +134,66 @@ test("rejects an unknown unused mode rather than silently ignoring it", async ()
     /unknown `unused` value/
   );
 });
+
+// A bundler that copies source lines verbatim often emits one mapping per
+// line. Composing against such a map must carry the column offset forward,
+// or every token on a line collapses onto its first character and the result
+// is only line-accurate. Regression test: this used to lose the column.
+test("recovers column precision from a line-granularity input map", async () => {
+  const source =
+    `export function longFunctionName(alphaParam, betaParam) ` +
+    `{ return alphaParam + betaParam; }`;
+
+  // One token, at the start of the line, pointing at column 20 of orig.js.
+  const inputMap = JSON.stringify({
+    version: 3,
+    file: "in.js",
+    sources: ["orig.js"],
+    sourcesContent: [source],
+    names: [],
+    mappings: "AAAoB",
+  });
+
+  const { map } = await minify("in.js", source, inputMap, { module: true });
+  const parsed = JSON.parse(map);
+
+  const B64 =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const decode = (s) => {
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+      let r = 0, sh = 0, c;
+      do {
+        c = B64.indexOf(s[i++]);
+        r += (c & 31) << sh;
+        sh += 5;
+      } while (c & 32);
+      out.push(r & 1 ? -(r >> 1) : r >> 1);
+    }
+    return out;
+  };
+
+  const columns = new Set();
+  let col = 0;
+  for (const line of parsed.mappings.split(";")) {
+    for (const seg of line.split(",")) {
+      if (!seg) continue;
+      const f = decode(seg);
+      if (f.length >= 4) {
+        col += f[3];
+        columns.add(col);
+      }
+    }
+  }
+
+  assert.ok(
+    columns.size > 1,
+    `every token collapsed onto one column (${[...columns]}), so the ` +
+      `offset was not carried forward`
+  );
+  assert.ok(
+    Math.min(...columns) >= 20,
+    `columns must start at the input token's column 20, got ${[...columns]}`
+  );
+});

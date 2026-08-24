@@ -276,11 +276,27 @@ fn compose(
       None => !0,
     };
 
+    // The caller's map may carry only one token per line: a bundler that
+    // copies source lines verbatim has no reason to emit more. Looking a
+    // position up therefore rounds it back to the start of its line, throwing
+    // away the column. Carrying the offset forward from the token recovers it,
+    // which is what `webpack-sources` does when it merges two maps. Only
+    // offsets within one line are meaningful, since nothing relates columns
+    // across a line break.
+    let src_col = if source_token.get_dst_line() == token.get_src_line() {
+      let shift = token
+        .get_src_col()
+        .saturating_sub(source_token.get_dst_col());
+      source_token.get_src_col().saturating_add(shift)
+    } else {
+      source_token.get_src_col()
+    };
+
     tokens.push(sourcemap::RawToken {
       dst_line: token.get_dst_line(),
       dst_col: token.get_dst_col(),
       src_line: source_token.get_src_line(),
-      src_col: source_token.get_src_col(),
+      src_col,
       src_id,
       name_id,
       is_range: false,
