@@ -107,3 +107,30 @@ test("minifySync does the same work without a promise", () => {
   assert.ok(result.code.length > 0);
   assert.deepEqual(JSON.parse(result.map).sources, ["s.js"]);
 });
+
+test("treats manually-pure calls as droppable, and keeps them otherwise", async () => {
+  const source = `export function go(){ console.log("noise"); return 42; }`;
+
+  const kept = await minify("k.js", source, undefined, {
+    module: true,
+    sourcemap: false,
+  });
+  assert.ok(kept.code.includes("console.log"), "console.log should survive by default");
+
+  const dropped = await minify("d.js", source, undefined, {
+    module: true,
+    sourcemap: false,
+    manualPureFunctions: ["console.log"],
+  });
+  assert.ok(
+    !dropped.code.includes("console.log"),
+    `manualPureFunctions did not reach the compressor: ${dropped.code}`
+  );
+});
+
+test("rejects an unknown unused mode rather than silently ignoring it", async () => {
+  await assert.rejects(
+    () => minify("u.js", "export const a = 1;", undefined, { unused: "nope" }),
+    /unknown `unused` value/
+  );
+});

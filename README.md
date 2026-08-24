@@ -50,6 +50,13 @@ module.exports = {
 | `mangleToplevel` | `false` | also mangle top-level names |
 | `sourcemap` | `true` | emit source maps |
 | `module` | inferred | force ES module parsing |
+| `removeWhitespace` | `true` | strip whitespace from the output |
+| `dropDebugger` | `true` | remove `debugger` statements |
+| `dropConsole` | `false` | remove `console.*` calls |
+| `sequences` | `true` | collapse statements with the comma operator |
+| `joinVars` | `true` | merge consecutive variable declarations |
+| `unused` | `remove` | unused bindings: `remove`, `keepAssign`, `keep` |
+| `manualPureFunctions` | `[]` | calls whose unused results may be dropped |
 
 Assets that arrive without a source map are minified but get no map back, so
 the build does not gain `.map` files it never asked for.

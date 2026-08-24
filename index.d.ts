@@ -19,6 +19,29 @@ export interface MinifyOptions {
   sourcemap?: boolean
   /** Parse as an ES module rather than inferring from the file extension. */
   module?: boolean
+  /** Strip whitespace from the output. Defaults to `true`. */
+  removeWhitespace?: boolean
+  /** Drop `debugger` statements. Defaults to `true`. */
+  dropDebugger?: boolean
+  /** Drop `console.*` calls. Defaults to `false`. */
+  dropConsole?: boolean
+  /**
+   * Collapse consecutive statements with the comma operator. Defaults to
+   * `true`.
+   */
+  sequences?: boolean
+  /** Merge consecutive variable declarations. Defaults to `true`. */
+  joinVars?: boolean
+  /**
+   * What to do with unused bindings: `remove`, `keepAssign` or `keep`.
+   * Defaults to `remove`.
+   */
+  unused?: string
+  /**
+   * Calls to treat as side-effect free, so an unused result can be dropped.
+   * Names are matched as written, e.g. `console.log`.
+   */
+  manualPureFunctions?: Array<string>
 }
 
 export interface MinifyResult {

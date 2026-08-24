@@ -12,7 +12,9 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use oxc::allocator::Allocator;
 use oxc::codegen::{Codegen, CodegenOptions};
-use oxc::minifier::{CompressOptions, MangleOptions, Minifier, MinifierOptions};
+use oxc::minifier::{
+  CompressOptions, CompressOptionsUnused, MangleOptions, Minifier, MinifierOptions, TreeShakeOptions,
+};
 use oxc::parser::Parser;
 use oxc::span::SourceType;
 use std::collections::HashMap;
@@ -32,6 +34,23 @@ pub struct MinifyOptions {
   pub sourcemap: Option<bool>,
   /// Parse as an ES module rather than inferring from the file extension.
   pub module: Option<bool>,
+  /// Strip whitespace from the output. Defaults to `true`.
+  pub remove_whitespace: Option<bool>,
+  /// Drop `debugger` statements. Defaults to `true`.
+  pub drop_debugger: Option<bool>,
+  /// Drop `console.*` calls. Defaults to `false`.
+  pub drop_console: Option<bool>,
+  /// Collapse consecutive statements with the comma operator. Defaults to
+  /// `true`.
+  pub sequences: Option<bool>,
+  /// Merge consecutive variable declarations. Defaults to `true`.
+  pub join_vars: Option<bool>,
+  /// What to do with unused bindings: `remove`, `keepAssign` or `keep`.
+  /// Defaults to `remove`.
+  pub unused: Option<String>,
+  /// Calls to treat as side-effect free, so an unused result can be dropped.
+  /// Names are matched as written, e.g. `console.log`.
+  pub manual_pure_functions: Option<Vec<String>>,
 }
 
 #[napi(object)]
@@ -133,7 +152,32 @@ pub fn minify_sync(
 
   let minifier_options = MinifierOptions {
     compress: if options.compress.unwrap_or(true) {
-      Some(CompressOptions::default())
+      // oxc's own defaults already describe the smallest useful output, so
+      // each field is overridden only when the caller asked for something
+      // else rather than being restated here.
+      let defaults = CompressOptions::default();
+      Some(CompressOptions {
+        drop_debugger: options.drop_debugger.unwrap_or(defaults.drop_debugger),
+        drop_console: options.drop_console.unwrap_or(defaults.drop_console),
+        sequences: options.sequences.unwrap_or(defaults.sequences),
+        join_vars: options.join_vars.unwrap_or(defaults.join_vars),
+        unused: match options.unused.as_deref() {
+          Some("keep") => CompressOptionsUnused::Keep,
+          Some("keepAssign") => CompressOptionsUnused::KeepAssign,
+          Some("remove") | None => CompressOptionsUnused::Remove,
+          Some(other) => {
+            return Err(Error::new(
+              Status::InvalidArg,
+              format!("unknown `unused` value {other:?}; expected remove, keepAssign or keep"),
+            ))
+          }
+        },
+        treeshake: TreeShakeOptions {
+          manual_pure_functions: options.manual_pure_functions.clone().unwrap_or_default(),
+          ..defaults.treeshake.clone()
+        },
+        ..defaults
+      })
     } else {
       None
     },
@@ -150,7 +194,7 @@ pub fn minify_sync(
   let minified = Minifier::new(minifier_options).minify(&allocator, &mut program);
 
   let codegen_options = CodegenOptions {
-    minify: true,
+    minify: options.remove_whitespace.unwrap_or(true),
     source_map_path: want_map.then(|| PathBuf::from(&filename)),
     ..CodegenOptions::default()
   };
