@@ -135,23 +135,30 @@ test("rejects an unknown unused mode rather than silently ignoring it", async ()
   );
 });
 
-// A bundler that copies source lines verbatim often emits one mapping per
-// line. Composing against such a map must carry the column offset forward,
-// or every token on a line collapses onto its first character and the result
-// is only line-accurate. Regression test: this used to lose the column.
-test("recovers column precision from a line-granularity input map", async () => {
+// Composing must never invent a column. Looking a position up in the input
+// map returns the nearest preceding token, and it is tempting to add the
+// leftover offset to sharpen the result -- but a generated line assembled by
+// a transform draws on many original columns, so the offset means nothing and
+// the sharpened column can land past the end of the line it names. A mapping
+// that points at a position which does not exist is worse than a coarse one:
+// it sends a debugger somewhere the file cannot go. Regression test: this
+// used to interpolate.
+test("never maps a position past the end of its original line", async () => {
+  // The original is one short line. Everything in the minified output must
+  // therefore land inside it, however long the intermediate line is.
+  const original = "const x = 1;";
   const source =
     `export function longFunctionName(alphaParam, betaParam) ` +
-    `{ return alphaParam + betaParam; }`;
+    `{ return alphaParam + betaParam + alphaParam * betaParam; }`;
 
-  // One token, at the start of the line, pointing at column 20 of orig.js.
+  // A single token at the start of the line, pointing at column 6 of orig.js.
   const inputMap = JSON.stringify({
     version: 3,
     file: "in.js",
     sources: ["orig.js"],
-    sourcesContent: [source],
+    sourcesContent: [original],
     names: [],
-    mappings: "AAAoB",
+    mappings: "AAAM",
   });
 
   const { map } = await minify("in.js", source, inputMap, { module: true });
@@ -174,27 +181,28 @@ test("recovers column precision from a line-granularity input map", async () => 
     return out;
   };
 
-  const columns = new Set();
-  let col = 0;
+  const lines = (parsed.sourcesContent?.[0] ?? original).split("\n");
+  const bad = [];
+  let srcLine = 0, srcCol = 0, n = 0;
   for (const line of parsed.mappings.split(";")) {
     for (const seg of line.split(",")) {
       if (!seg) continue;
       const f = decode(seg);
-      if (f.length >= 4) {
-        col += f[3];
-        columns.add(col);
-      }
+      if (f.length < 4) continue;
+      srcLine += f[2];
+      srcCol += f[3];
+      n++;
+      const len = lines[srcLine]?.length ?? 0;
+      if (srcCol > len) bad.push(`${srcLine}:${srcCol} but line is ${len}`);
     }
   }
 
-  assert.ok(
-    columns.size > 1,
-    `every token collapsed onto one column (${[...columns]}), so the ` +
-      `offset was not carried forward`
-  );
-  assert.ok(
-    Math.min(...columns) >= 20,
-    `columns must start at the input token's column 20, got ${[...columns]}`
+  assert.ok(n > 0, "expected the composed map to contain mappings");
+  assert.equal(
+    bad.length,
+    0,
+    `${bad.length} of ${n} mappings point past the end of their line: ` +
+      bad.slice(0, 5).join(", ")
   );
 });
 
