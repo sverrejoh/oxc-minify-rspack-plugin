@@ -56,12 +56,12 @@ jobs:
             linker: CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: ${{ !matrix.settings.docker }}
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Rust
         if: ${{ !matrix.settings.docker }}
@@ -90,6 +90,11 @@ jobs:
           image: ${{ matrix.settings.docker }}
           options: "--user 0:0 -v ${{ github.workspace }}:/build -w /build"
           run: |
+            # The napi-rs images pin Cargo 1.82, which predates edition2024 and
+            # so cannot even read oxc's dependency tree.
+            rustup update stable --no-self-update
+            rustup default stable
+            rustup target add ${{ matrix.settings.target }}
             npm install --ignore-scripts
             npx napi build --platform --release --target ${{ matrix.settings.target }}
 
@@ -120,10 +125,10 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install --ignore-scripts
       - name: Download the binary for this host
         uses: actions/download-artifact@v4
@@ -142,10 +147,10 @@ jobs:
       # Lets npm record provenance for the published package.
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           registry-url: "https://registry.npmjs.org"
 
       - run: npm install --ignore-scripts
