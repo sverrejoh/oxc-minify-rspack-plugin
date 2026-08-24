@@ -1,0 +1,94 @@
+{
+  "name": "@sverrejoh/oxc-minify-rspack-plugin",
+  "version": "0.1.0",
+  "description": "Minify JavaScript with oxc and compose the source map in Rust, so the bundler never merges maps in JS.",
+  "keywords": [
+    "oxc",
+    "minify",
+    "minifier",
+    "rspack",
+    "webpack",
+    "sourcemap",
+    "source-map",
+    "napi",
+    "rust"
+  ],
+  "license": "MIT",
+  "author": "Sverre Johann Bj\u00f8rke",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sverrejoh/oxc-minify-rspack-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sverrejoh/oxc-minify-rspack-plugin/issues"
+  },
+  "homepage": "https://github.com/sverrejoh/oxc-minify-rspack-plugin#readme",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "plugin.js",
+    "plugin.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "napi": {
+    "binaryName": "oxc-minify-rspack-plugin",
+    "packageName": "@sverrejoh/oxc-minify-rspack-plugin",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc",
+      "i686-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "armv7-unknown-linux-gnueabihf"
+    ]
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "node --test \"test/*.test.mjs\"",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@jridgewell/gen-mapping": "^0.3.13",
+    "@jridgewell/trace-mapping": "^0.3.31",
+    "@napi-rs/cli": "^3.0.0",
+    "@rspack/core": "^2.1.10"
+  },
+  "peerDependencies": {
+    "@rspack/core": ">= 1"
+  },
+  "peerDependenciesMeta": {
+    "@rspack/core": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "@sverrejoh/oxc-minify-rspack-plugin-darwin-arm64": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-darwin-x64": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-linux-arm-gnueabihf": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-linux-arm64-gnu": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-linux-arm64-musl": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-linux-x64-gnu": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-linux-x64-musl": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-win32-arm64-msvc": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-win32-ia32-msvc": "0.1.0",
+    "@sverrejoh/oxc-minify-rspack-plugin-win32-x64-msvc": "0.1.0"
+  }
+}

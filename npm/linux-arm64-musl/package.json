@@ -1,0 +1,45 @@
+{
+  "name": "@sverrejoh/oxc-minify-rspack-plugin-linux-arm64-musl",
+  "version": "0.1.0",
+  "cpu": [
+    "arm64"
+  ],
+  "main": "oxc-minify-rspack-plugin.linux-arm64-musl.node",
+  "files": [
+    "oxc-minify-rspack-plugin.linux-arm64-musl.node"
+  ],
+  "description": "Minify JavaScript with oxc and compose the result against an existing source map, entirely in Rust. Ships prebuilt binaries for all major platforms.",
+  "keywords": [
+    "oxc",
+    "minify",
+    "minifier",
+    "sourcemap",
+    "source-map",
+    "rspack",
+    "webpack",
+    "napi-rs"
+  ],
+  "author": "Sverre Johann Bjørke",
+  "homepage": "https://github.com/sverrejoh/oxc-minify-rspack-plugin#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sverrejoh/oxc-minify-rspack-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sverrejoh/oxc-minify-rspack-plugin/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "musl"
+  ]
+}
