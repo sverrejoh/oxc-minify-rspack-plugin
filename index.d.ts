@@ -42,6 +42,15 @@ export interface MinifyOptions {
    * Names are matched as written, e.g. `console.log`.
    */
   manualPureFunctions?: Array<string>
+  /**
+   * Which comments to keep: `legal`, `none` or `all`.
+   *
+   * Defaults to `legal`, which drops ordinary and jsdoc comments but keeps
+   * licence text - comments starting `/*!` or containing `@license` or
+   * `@preserve`. Note that `oxc-minify` drops those too, so `none` is the
+   * setting that reproduces it exactly.
+   */
+  comments?: string
 }
 
 export interface MinifyResult {

@@ -197,3 +197,52 @@ test("recovers column precision from a line-granularity input map", async () => 
     `columns must start at the input token's column 20, got ${[...columns]}`
   );
 });
+
+// `minify` in oxc's codegen only removes whitespace. Comments survive it, and
+// on code carrying jsdoc they can be most of the output: a real 58 KB module
+// minified to 48 KB, of which 42 KB was comments, against 6.6 KB from
+// oxc-minify. Regression test for that.
+test("drops comments, keeping licence text unless told otherwise", async () => {
+  const source = [
+    `/*! Copyright Example Corp. @license MIT */`,
+    `/** A jsdoc block that is pure documentation. */`,
+    `// an ordinary comment`,
+    `export function hello(someLongParameterName) {`,
+    `  return someLongParameterName + 1;`,
+    `}`,
+  ].join("\n");
+
+  const dflt = await minify("c.js", source, undefined, {
+    module: true,
+    sourcemap: false,
+  });
+  assert.ok(dflt.code.includes("@license"), "licence text must survive");
+  assert.ok(!dflt.code.includes("jsdoc block"), "jsdoc must be dropped");
+  assert.ok(!dflt.code.includes("ordinary comment"), "normal must be dropped");
+
+  const none = await minify("c.js", source, undefined, {
+    module: true,
+    sourcemap: false,
+    comments: "none",
+  });
+  assert.ok(!none.code.includes("@license"), `comments:none left ${none.code}`);
+  assert.ok(!none.code.includes("/*"), "no comment should remain");
+
+  const all = await minify("c.js", source, undefined, {
+    module: true,
+    sourcemap: false,
+    comments: "all",
+  });
+  assert.ok(all.code.includes("jsdoc block"), "comments:all must keep jsdoc");
+
+  assert.ok(
+    none.code.length < dflt.code.length && dflt.code.length < all.code.length,
+    `expected none < legal < all, got ${none.code.length}/` +
+      `${dflt.code.length}/${all.code.length}`
+  );
+
+  await assert.rejects(
+    () => minify("c.js", source, undefined, { comments: "bogus" }),
+    /unknown `comments` value/
+  );
+});

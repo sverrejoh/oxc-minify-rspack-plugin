@@ -11,7 +11,7 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use oxc::allocator::Allocator;
-use oxc::codegen::{Codegen, CodegenOptions};
+use oxc::codegen::{Codegen, CodegenOptions, CommentOptions, LegalComment};
 use oxc::minifier::{
   CompressOptions, CompressOptionsUnused, MangleOptions, Minifier, MinifierOptions, TreeShakeOptions,
 };
@@ -51,6 +51,13 @@ pub struct MinifyOptions {
   /// Calls to treat as side-effect free, so an unused result can be dropped.
   /// Names are matched as written, e.g. `console.log`.
   pub manual_pure_functions: Option<Vec<String>>,
+  /// Which comments to keep: `legal`, `none` or `all`.
+  ///
+  /// Defaults to `legal`, which drops ordinary and jsdoc comments but keeps
+  /// licence text - comments starting `/*!` or containing `@license` or
+  /// `@preserve`. Note that `oxc-minify` drops those too, so `none` is the
+  /// setting that reproduces it exactly.
+  pub comments: Option<String>,
 }
 
 #[napi(object)]
@@ -195,6 +202,25 @@ pub fn minify_sync(
 
   let codegen_options = CodegenOptions {
     minify: options.remove_whitespace.unwrap_or(true),
+    // `minify` only removes whitespace: comments survive it, and on code
+    // carrying jsdoc that can be most of the output. They have to be turned
+    // off explicitly.
+    comments: match options.comments.as_deref() {
+      Some("all") => CommentOptions::default(),
+      Some("none") => CommentOptions::disabled(),
+      Some("legal") | None => CommentOptions {
+        normal: false,
+        jsdoc: false,
+        annotation: false,
+        legal: LegalComment::Inline,
+      },
+      Some(other) => {
+        return Err(Error::new(
+          Status::InvalidArg,
+          format!("unknown `comments` value {other:?}; expected legal, none or all"),
+        ))
+      }
+    },
     source_map_path: want_map.then(|| PathBuf::from(&filename)),
     ..CodegenOptions::default()
   };
