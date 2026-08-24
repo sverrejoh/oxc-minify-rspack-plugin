@@ -36,20 +36,32 @@ jobs:
             target: aarch64-pc-windows-msvc
           - host: windows-latest
             target: i686-pc-windows-msvc
-          # Linux builds run in the napi-rs containers so the resulting .node
-          # works against older glibc / musl than the runner itself ships.
+          # Linux builds run in containers so the resulting .node works
+          # against an older glibc / musl than the runners themselves ship.
+          # The napi-rs images carry the cross toolchains but pin Cargo 1.82,
+          # which predates edition2024 and cannot read oxc's dependency tree,
+          # so the toolchain is updated first. Their Alpine image is stuck on
+          # Node 18, which lacks util.styleText that @napi-rs/cli needs, so
+          # musl uses the official Node image and installs Rust from Alpine.
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
+            prep: rustup update stable --no-self-update && rustup default stable
+          # An amd64 image that cross-compiles to aarch64, so it belongs on an
+          # x64 runner.
           - host: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-          - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            prep: rustup update stable --no-self-update && rustup default stable
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            docker: node:22-alpine
+            prep: apk add --no-cache rustup build-base && rustup-init -y --profile minimal --default-toolchain stable && export PATH=$HOME/.cargo/bin:$PATH
+          # node:22-alpine is multi-arch, so this one builds natively.
           - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            docker: node:22-alpine
+            prep: apk add --no-cache rustup build-base && rustup-init -y --profile minimal --default-toolchain stable && export PATH=$HOME/.cargo/bin:$PATH
           - host: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             setup: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
@@ -90,10 +102,8 @@ jobs:
           image: ${{ matrix.settings.docker }}
           options: "--user 0:0 -v ${{ github.workspace }}:/build -w /build"
           run: |
-            # The napi-rs images pin Cargo 1.82, which predates edition2024 and
-            # so cannot even read oxc's dependency tree.
-            rustup update stable --no-self-update
-            rustup default stable
+            set -e
+            ${{ matrix.settings.prep }}
             rustup target add ${{ matrix.settings.target }}
             npm install --ignore-scripts
             npx napi build --platform --release --target ${{ matrix.settings.target }}
