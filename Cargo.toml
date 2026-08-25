@@ -10,9 +10,9 @@ crate-type = ["cdylib"]
 [dependencies]
 napi        = { version = "3", default-features = false, features = ["napi4"] }
 napi-derive = "3"
-oxc         = { version = "0.147", features = ["codegen", "minifier"] }
+oxc         = { version = "0.130", features = ["codegen", "minifier"] }
 sourcemap     = "9"
-oxc_sourcemap = "8"
+oxc_sourcemap = "6"
 
 [build-dependencies]
 napi-build = "2"

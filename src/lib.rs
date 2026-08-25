@@ -147,7 +147,7 @@ pub fn minify_sync(
   let parsed = Parser::new(&allocator, &source, source_type).parse();
   // Recoverable problems are reported rather than thrown: a bundler generally
   // prefers a warning and unminified output to a failed build.
-  let warnings: Vec<String> = parsed.diagnostics.iter().map(|e| e.to_string()).collect();
+  let warnings: Vec<String> = parsed.errors.iter().map(|e| e.to_string()).collect();
   if parsed.panicked {
     return Err(Error::new(
       Status::GenericFailure,
@@ -196,7 +196,6 @@ pub fn minify_sync(
     } else {
       None
     },
-    mangle_properties: None,
   };
   let minified = Minifier::new(minifier_options).minify(&allocator, &mut program);
 
