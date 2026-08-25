@@ -13,7 +13,8 @@ use napi_derive::napi;
 use oxc::allocator::Allocator;
 use oxc::codegen::{Codegen, CodegenOptions, CommentOptions, LegalComment};
 use oxc::minifier::{
-  CompressOptions, CompressOptionsUnused, MangleOptions, Minifier, MinifierOptions, TreeShakeOptions,
+  CompressOptions, CompressOptionsUnused, MangleOptions, Minifier, MinifierOptions,
+  PropertyReadSideEffects, TreeShakeOptions,
 };
 use oxc::parser::Parser;
 use oxc::span::SourceType;
@@ -51,6 +52,16 @@ pub struct MinifyOptions {
   /// Calls to treat as side-effect free, so an unused result can be dropped.
   /// Names are matched as written, e.g. `console.log`.
   pub manual_pure_functions: Option<Vec<String>>,
+  /// Respect pure annotations such as `/* @__PURE__ */` and
+  /// `/* #__NO_SIDE_EFFECTS__ */`. Defaults to `true`.
+  pub annotations: Option<bool>,
+  /// Whether reading a property can have side effects. `false` lets unused
+  /// property reads be dropped, which matters for generated GraphQL/Relay
+  /// code. Defaults to `true`.
+  ///
+  /// `oxc-minify` spells this `boolean | "always"`; normalise `"always"` to
+  /// `true` before calling, since both mean the same thing.
+  pub property_read_side_effects: Option<bool>,
   /// Which comments to keep: `legal`, `none` or `all`.
   ///
   /// Defaults to `legal`, which drops ordinary and jsdoc comments but keeps
@@ -181,6 +192,14 @@ pub fn minify_sync(
         },
         treeshake: TreeShakeOptions {
           manual_pure_functions: options.manual_pure_functions.clone().unwrap_or_default(),
+          annotations: options.annotations.unwrap_or(defaults.treeshake.annotations),
+          // `oxc-minify` exposes this as `boolean | "always"`; both `true` and
+          // `"always"` mean `All`, so the caller normalises to a bool.
+          property_read_side_effects: match options.property_read_side_effects {
+            Some(true) => PropertyReadSideEffects::All,
+            Some(false) => PropertyReadSideEffects::None,
+            None => defaults.treeshake.property_read_side_effects,
+          },
           ..defaults.treeshake.clone()
         },
         ..defaults
