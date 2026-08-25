@@ -43,6 +43,20 @@ export interface MinifyOptions {
    */
   manualPureFunctions?: Array<string>
   /**
+   * Respect pure annotations such as `/* @__PURE__ *\/` and
+   * `/* #__NO_SIDE_EFFECTS__ *\/`. Defaults to `true`.
+   */
+  annotations?: boolean
+  /**
+   * Whether reading a property can have side effects. `false` lets unused
+   * property reads be dropped, which matters for generated GraphQL/Relay
+   * code. Defaults to `true`.
+   *
+   * `oxc-minify` spells this `boolean | "always"`; normalise `"always"` to
+   * `true` before calling, since both mean the same thing.
+   */
+  propertyReadSideEffects?: boolean
+  /**
    * Which comments to keep: `legal`, `none` or `all`.
    *
    * Defaults to `legal`, which drops ordinary and jsdoc comments but keeps

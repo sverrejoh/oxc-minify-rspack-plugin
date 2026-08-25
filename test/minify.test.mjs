@@ -254,3 +254,47 @@ test("drops comments, keeping licence text unless told otherwise", async () => {
     /unknown `comments` value/
   );
 });
+
+test("treeshake annotations and propertyReadSideEffects change the output", async () => {
+  // A pure-annotated call whose result is unused: droppable only when
+  // annotations are respected.
+  const annotated = `const unused = /* @__PURE__ */ sideEffecty(1);\nexport const kept = 2;\n`;
+
+  const respected = await minify("a.js", annotated, undefined, {
+    module: true,
+    sourcemap: false,
+    annotations: true,
+  });
+  const ignored = await minify("a.js", annotated, undefined, {
+    module: true,
+    sourcemap: false,
+    annotations: false,
+  });
+  assert.ok(
+    !respected.code.includes("sideEffecty"),
+    `annotations:true should drop the pure call, got ${respected.code}`
+  );
+  assert.ok(
+    ignored.code.includes("sideEffecty"),
+    `annotations:false should keep the call, got ${ignored.code}`
+  );
+
+  // An unused property read: droppable only when reads are side-effect free.
+  const propRead = `const o = globalThis.someObject;\nconst unused = o.a.b;\nexport const kept = 1;\n`;
+
+  const free = await minify("b.js", propRead, undefined, {
+    module: true,
+    sourcemap: false,
+    propertyReadSideEffects: false,
+  });
+  const unsafe = await minify("b.js", propRead, undefined, {
+    module: true,
+    sourcemap: false,
+    propertyReadSideEffects: true,
+  });
+  assert.ok(
+    free.code.length < unsafe.code.length,
+    `propertyReadSideEffects:false should drop more, got ` +
+      `${free.code.length} vs ${unsafe.code.length}`
+  );
+});
